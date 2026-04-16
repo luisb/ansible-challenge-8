@@ -6,6 +6,40 @@
     - group_vars/webservers/vault.yml
   tasks:
 
+    - name: Install acl for become_user temp files
+      ansible.builtin.dnf:
+        name: acl
+        state: present
+
+    - name: Ensure httpd is installed
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+
+    - name: Ensure httpd is running and enabled
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Ensure firewalld is installed
+      ansible.builtin.dnf:
+        name: firewalld
+        state: present
+
+    - name: Ensure firewalld is running and enabled
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Allow http service through firewall
+      ansible.posix.firewalld:
+        service: http
+        state: enabled
+        permanent: true
+        immediate: true
+
     - name: Deploy config
       ansible.builtin.template:
         src: myapp.conf.j2
@@ -15,11 +49,6 @@
         mode: '0640'
       no_log: true
       notify: restart httpd
-
-    - name: Install acl for become_user temp files
-      ansible.builtin.dnf:
-        name: acl
-        state: present
 
     - name: Test if file is readable by apache
       ansible.builtin.stat:
