@@ -1,0 +1,40 @@
+---
+- name: Deploy myapp
+  hosts: webservers
+  become: true
+  vars_files:
+    - group_vars/webservers/vault.yml
+  tasks:
+
+    - name: Deploy config
+      ansible.builtin.template:
+        src: myapp.conf.j2
+        dest: /etc/myapp.conf
+        owner: apache
+        group: apache
+        mode: '0640'
+      no_log: true
+      notify: restart httpd
+
+    - name: Install acl for become_user temp files
+      ansible.builtin.dnf:
+        name: acl
+        state: present
+
+    - name: Test if file is readable by apache
+      ansible.builtin.stat:
+        path: /etc/myapp.conf
+      become_user: apache
+      register: file_stat
+
+    - name: Assert file is readable by apache
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.readable == true
+
+  handlers:
+    - name: restart httpd
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+      listen: restart httpd
